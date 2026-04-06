@@ -1,42 +1,85 @@
-import { StyleSheet, Text, View, Button, TextInput, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, FlatList, Modal, Button, Alert, Pressable, Image } from 'react-native';
 import { useState } from 'react';
+import GoalItem from './components/GoalItem';
+import GoalInput from './components/GoalInput';
 
 export default function App() {
-  const [enteredGoalText, setEnteredGoalText] = useState('');
   const [courseGoals, setCourseGoals] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
 
-  function goalInputHandler(text) {
-    setEnteredGoalText(text);
+  function addGoalHandler(enteredText) {
+    if (!enteredText.trim()) return;
+
+    setCourseGoals((currentGoals) => [
+      ...currentGoals,
+      { text: enteredText, key: Math.random().toString() },
+    ]);
+
+    if (courseGoals.length + 1 > 5) {
+      setModalVisible(true);
+    }
   }
 
-  function addGoalHandler() {
-    if (!enteredGoalText.trim()) return;
-    setCourseGoals((currentGoals) => [...currentGoals, enteredGoalText]);
-    setEnteredGoalText('');
+  function deleteGoalHandler(key) {
+    Alert.alert(
+      'Delete Goal',
+      'Are you sure you want to delete this goal?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Yes', 
+          style: 'destructive', 
+          onPress: () => {
+            setCourseGoals((currentGoals) =>
+              currentGoals.filter((goal) => goal.key !== key)
+            );
+          }
+        },
+      ]
+    );
+  }
+
+  function handleUserIconPress() {
+    Alert.alert('Welcome!', 'Hello! Welcome to your Course Goals App.');
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Your Course Goals</Text>
 
-      <View style={styles.inputContainer}>
-        <TextInput
-          placeholder="Your course goal!"
-          style={styles.input}
-          value={enteredGoalText}
-          onChangeText={goalInputHandler}
-        />
-        <Button title="ADD GOAL" color="#3366FF" onPress={addGoalHandler} />
+      <View style={styles.headerContainer}>
+        <Text style={styles.header}>Your Course Goals</Text>
+
+        <Pressable onPress={handleUserIconPress}>
+          <Image source={require('./assets/userprofile.png')} style={styles.userIcon} />
+        </Pressable>
       </View>
-      <View style={styles.underline} />
 
-      <ScrollView>
-        {courseGoals.map((goal, index) => (
-          <View key={index} style={styles.goalItem}>
-            <Text style={styles.goalText}>{goal}</Text>
-          </View>
-        ))}
-      </ScrollView>
+      <GoalInput onAddGoal={addGoalHandler} />
+
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalView}>
+          <Text style={styles.modalText}>Whoa! Too many goals!</Text>
+          <Button title="Close" onPress={() => setModalVisible(false)} />
+        </View>
+      </Modal>
+
+      <Text style={styles.listTitle}>LIST OF GOALS</Text>
+
+      <FlatList
+        data={courseGoals}
+        renderItem={(itemData) => (
+          <GoalItem
+            text={itemData.item.text}
+            onDelete={() => deleteGoalHandler(itemData.item.key)}
+          />
+        )}
+        keyExtractor={(item) => item.key}
+      />
     </View>
   );
 }
@@ -44,43 +87,45 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#F0F4FF', 
+    padding: 15,
+    backgroundColor: '#F0F4FF',
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
   },
   header: {
     fontSize: 22,
     fontWeight: 'bold',
     color: '#3366FF',
-    textAlign: 'center',
-    marginBottom: 15,
   },
-  inputContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 5, 
+  userIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#3366FF',
-    padding: 10,
-    width: '70%',
-    borderRadius: 5,
-    backgroundColor: 'white', 
-  },
-  underline: {
-    borderBottomColor: '#3366FF',
-    borderBottomWidth: 1,
-    marginBottom: 15,
-  },
-  goalItem: {
+  listTitle: {
     backgroundColor: '#3366FF',
-    padding: 10,
-    borderRadius: 5,
-    marginVertical: 5,
-  },
-  goalText: {
     color: 'white',
     fontWeight: 'bold',
+    padding: 8,
+    textAlign: 'center',
+    marginBottom: 10,
+    borderRadius: 5,
+  },
+  modalView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalText: {
+    backgroundColor: 'white',
+    padding: 20,
+    fontSize: 18,
+    borderRadius: 10,
+    marginBottom: 15,
   },
 });
