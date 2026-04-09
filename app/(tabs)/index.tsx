@@ -1,98 +1,185 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React from 'react';
+import {
+  Alert,
+  BackHandler,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableHighlight,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+// ---- Message Utils ----
+let nextId = 1;
+const getNextId = () => nextId++;
 
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+const createTextMessage = (text) => ({
+  id: getNextId(),
+  type: 'text',
+  text,
+});
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+const createImageMessage = (uri) => ({
+  id: getNextId(),
+  type: 'image',
+  uri,
+});
+
+const createLocationMessage = (coordinate) => ({
+  id: getNextId(),
+  type: 'location',
+  coordinate,
+});
+
+// ---- MAIN COMPONENT ----
+export default class Index extends React.Component {
+  state = {
+    messages: [
+      createImageMessage('https://unsplash.it/300/300'),
+      createTextMessage('Hello!'),
+      createTextMessage('World!'),
+      createLocationMessage({
+        latitude: 37.78825,
+        longitude: -122.4324,
+      }),
+    ],
+    fullscreenImageId: null,
+  };
+
+  componentDidMount() {
+    this.backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        if (this.state.fullscreenImageId) {
+          this.dismissFullscreenImage();
+          return true;
+        }
+        return false;
+      }
+    );
+  }
+
+  componentWillUnmount() {
+    this.backHandler.remove();
+  }
+
+  handlePressMessage = (item) => {
+    if (item.type === 'text') {
+      Alert.alert(
+        'Delete Message?',
+        item.text,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: () => this.deleteMessage(item.id),
+          },
+        ]
+      );
+    } else if (item.type === 'image') {
+      this.setState({ fullscreenImageId: item.id });
+    }
+  };
+
+  deleteMessage = (id) => {
+    this.setState({
+      messages: this.state.messages.filter((m) => m.id !== id),
+    });
+  };
+
+  dismissFullscreenImage = () => {
+    this.setState({ fullscreenImageId: null });
+  };
+
+  renderFullscreenImage = () => {
+    const { fullscreenImageId, messages } = this.state;
+    if (!fullscreenImageId) return null;
+
+    const image = messages.find((m) => m.id === fullscreenImageId);
+    if (!image) return null;
+
+    return (
+      <TouchableHighlight
+        style={styles.overlay}
+        onPress={this.dismissFullscreenImage}
+      >
+        <Image style={styles.fullscreen} source={{ uri: image.uri }} />
+      </TouchableHighlight>
+    );
+  };
+
+  renderItem = ({ item }) => (
+    <TouchableOpacity
+      style={styles.row}
+      onPress={() => this.handlePressMessage(item)}
+    >
+      {item.type === 'text' && (
+        <View style={styles.bubble}>
+          <Text style={styles.text}>{item.text}</Text>
+        </View>
+      )}
+
+      {item.type === 'image' && (
+        <Image style={styles.image} source={{ uri: item.uri }} />
+      )}
+
+      {item.type === 'location' && (
+        <View style={styles.location}>
+          <Text>
+            📍 {item.coordinate.latitude}, {item.coordinate.longitude}
+          </Text>
+        </View>
+      )}
+    </TouchableOpacity>
   );
+
+  render() {
+    return (
+      <View style={styles.container}>
+        <FlatList
+          inverted
+          data={this.state.messages}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={this.renderItem}
+        />
+        {this.renderFullscreenImage()}
+      </View>
+    );
+  }
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: { flex: 1, padding: 20 },
+  row: { marginVertical: 5 },
+  bubble: {
+    backgroundColor: '#007AFF',
+    padding: 10,
+    borderRadius: 15,
+    maxWidth: '70%',
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  text: { color: 'white' },
+  image: { width: 200, height: 200, borderRadius: 10 },
+  location: {
+    backgroundColor: '#E0F7FA',
+    padding: 10,
+    borderRadius: 10,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
+  overlay: {
+    position: 'absolute',
+    top: 0,
     bottom: 0,
     left: 0,
-    position: 'absolute',
+    right: 0,
+    backgroundColor: 'black',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullscreen: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
   },
 });

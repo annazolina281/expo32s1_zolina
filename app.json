@@ -2,6 +2,10 @@
   "expo": {
     "name": "Messaging",
     "slug": "Messaging",
+    "androidStatusBar":{
+      "barStyle": "dark-content",
+      "backgroundColor": "#FFFFFF"
+    },
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -38,7 +42,10 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "expo-font",
+      "expo-image",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
